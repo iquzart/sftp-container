@@ -1,0 +1,74 @@
+# -------------------------------
+# Basic Configuration
+# -------------------------------
+Port 22
+Protocol 2
+AddressFamily any
+ListenAddress 0.0.0.0
+
+# -------------------------------
+# Authentication Settings
+# -------------------------------
+PermitRootLogin no
+PasswordAuthentication no
+PermitEmptyPasswords no
+ChallengeResponseAuthentication no
+UsePAM yes
+AuthenticationMethods publickey
+
+# -------------------------------
+# Host Key Configuration
+# -------------------------------
+HostKey /etc/ssh/ssh_host_rsa_key
+HostKey /etc/ssh/ssh_host_ecdsa_key
+HostKey /etc/ssh/ssh_host_ed25519_key
+
+# -------------------------------
+# Logging and Monitoring
+# -------------------------------
+SyslogFacility AUTH
+LogLevel VERBOSE
+MaxAuthTries 3
+LoginGraceTime 30
+
+# -------------------------------
+# Connection Restrictions
+# -------------------------------
+AllowUsers user1
+IgnoreRhosts yes
+IgnoreUserKnownHosts yes
+PermitUserEnvironment no
+
+# -------------------------------
+# SSH Protocol Hardening
+# -------------------------------
+# Only strong key exchange algorithms
+KexAlgorithms curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group-exchange-sha256
+
+# Only strong ciphers
+Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes256-ctr
+
+# Only secure MACs
+MACs hmac-sha2-512,hmac-sha2-256
+
+# Disable legacy and insecure options
+UseDNS no
+Compression no
+TCPKeepAlive no
+PermitTunnel no
+AllowAgentForwarding no
+PrintMotd no
+Banner none
+
+# Only allow SFTP, disable shell access
+Subsystem sftp internal-sftp -l INFO
+
+# Restrict user to SFTP only with chroot
+Match User user1 
+    ChrootDirectory /home/user1
+    ForceCommand internal-sftp -l INFO
+    AllowTcpForwarding no
+    X11Forwarding no
+    PermitTTY no
+
+
