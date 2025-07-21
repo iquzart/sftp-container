@@ -2,7 +2,7 @@
 
 # SFTP Hardened Server Images
 
-[![Build Status](https://github.com/iquzart/sftp-container/actions/workflows/docker-build-push.yml/badge.svg)](https://github.com/iquzart/sftp-container/actions/workflows/docker-build-push.yml)
+[![Build Status](https://github.com/iquzart/sftp-container/actions/workflows/build-push.yml/badge.svg)](https://github.com/iquzart/sftp-container/actions/workflows/build-push.yml)
 [![Container Image](https://img.shields.io/github/v/release/iquzart/sftp-container?logo=docker&label=container%20image)](https://github.com/iquzart/sftp-container/packages)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)]
 
