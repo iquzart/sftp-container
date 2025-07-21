@@ -1,0 +1,21 @@
+FROM registry.access.redhat.com/ubi9/ubi
+
+LABEL maintainer="Muhammed Iqbal <iquzart@hotmail.com>"
+LABEL description="Hardened UBI9 SFTP server with CIS SSH compliance"
+
+RUN echo "sslverify=0" >> /etc/dnf/dnf.conf && \
+  dnf install -y openssh-server && \
+  dnf clean all && \
+  mkdir -p /var/run/sshd /sftp && \
+  chmod 755 /sftp && \
+  rm -f /etc/ssh/ssh_host_*key*
+
+COPY sshd_config /etc/ssh/sshd_config
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+EXPOSE 22
+
+ENTRYPOINT ["/entrypoint.sh"]
+
