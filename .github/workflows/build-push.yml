@@ -28,7 +28,7 @@ jobs:
 
     strategy:
       matrix:
-        flavor: [debian, ubi]
+        flavor: [ubi]
 
     steps:
       - name: Checkout source

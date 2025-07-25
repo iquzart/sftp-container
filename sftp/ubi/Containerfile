@@ -1,21 +1,70 @@
-FROM registry.access.redhat.com/ubi9/ubi
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
 
 LABEL maintainer="Muhammed Iqbal <iquzart@hotmail.com>"
 LABEL description="Hardened UBI9 SFTP server with CIS SSH compliance"
 
-RUN echo "sslverify=0" >> /etc/dnf/dnf.conf && \
-  dnf install -y openssh-server && \
-  dnf clean all && \
-  mkdir -p /var/run/sshd /sftp && \
-  chmod 755 /sftp && \
-  rm -f /etc/ssh/ssh_host_*key*
+# Arguments for SFTP user setup
+ARG SFTP_USER=sftp-user
+ARG SFTP_BASE=/sftp
+ARG SFTP_DIR_NAME=data
+ARG GENERATE_SSH_HOST_KEYS=false
+ARG SFTP_PORT=2222
+ARG SFTP_ALLOWED_IP=172.21.0.1
 
-COPY sshd_config /etc/ssh/sshd_config
+# Environment variables derived from build args
+ENV SFTP_USER=${SFTP_USER} \
+  SFTP_BASE=${SFTP_BASE} \
+  SFTP_HOME=${SFTP_BASE}/${SFTP_USER} \
+  SFTP_DIR_NAME=${SFTP_DIR_NAME} \
+  SFTP_PORT=${SFTP_PORT} \
+  SFTP_ALLOWED_IP=${SFTP_ALLOWED_IP}
 
+# Copy configuration files
+COPY sshd_config.template /tmp/sshd_config.template
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
 
-EXPOSE 22
+RUN set -eux && \
+  # Configure DNF and install packages
+  echo "sslverify=0" >> /etc/dnf/dnf.conf && \
+  microdnf install -y openssh-server && \
+  microdnf clean all && \
+  rm -rf /var/cache/{yum,dnf} /var/tmp/* && \
+  \
+  # Create user and directories in logical order
+  useradd -m -d "${SFTP_HOME}" -s /sbin/nologin "${SFTP_USER}" && \
+  install -d -m 755 "${SFTP_HOME}/${SFTP_DIR_NAME}" && \
+  install -d -m 700 "${SFTP_HOME}/.ssh" && \
+  \
+  # Set ownership and permissions efficiently
+  chown root:root "${SFTP_BASE}" "${SFTP_HOME}" "${SFTP_HOME}/${SFTP_DIR_NAME}" && \
+  chmod 755 "${SFTP_BASE}" "${SFTP_HOME}" && \
+  chmod 555 "${SFTP_HOME}/${SFTP_DIR_NAME}" && \
+  \
+  # Setup SSH authorized_keys
+  touch "${SFTP_HOME}/.ssh/authorized_keys" && \
+  chmod 600 "${SFTP_HOME}/.ssh/authorized_keys" && \
+  chown -R "${SFTP_USER}:${SFTP_USER}" "${SFTP_HOME}/.ssh" && \
+  \
+  # Configure SSH daemon
+  chmod +x /entrypoint.sh && \
+  rm -f /etc/ssh/ssh_host_*key* && \
+  sed -e "s|\${SFTP_PORT}|${SFTP_PORT}|g" \
+  -e "s|\${SFTP_ALLOWED_IP}|${SFTP_ALLOWED_IP}|g" \
+  -e "s|\${SFTP_USER}|${SFTP_USER}|g" \
+  -e "s|\${SFTP_BASE}|${SFTP_BASE}|g" \
+  /tmp/sshd_config.template > /etc/ssh/sshd_config && \
+  rm -f /tmp/sshd_config.template  /etc/ssh/ssh_host_*key* && \
+  \
+  # Conditionally generate SSH host keys
+  if [ "${GENERATE_SSH_HOST_KEYS:-false}" = "true" ]; then \
+  ssh-keygen -t ed25519 -f /etc/ssh/ssh_host_ed25519_key -N "" -q && \
+  ssh-keygen -t rsa -b 4096 -f /etc/ssh/ssh_host_rsa_key -N "" -q && \
+  chmod 600 /etc/ssh/ssh_host_*_key; \
+  fi
+
+
+EXPOSE ${SFTP_PORT}
+
+# USER ${SFTP_USER} #non-root won't work with chroot
 
 ENTRYPOINT ["/entrypoint.sh"]
-

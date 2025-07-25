@@ -1,10 +1,12 @@
 # -------------------------------
 # Basic Configuration
 # -------------------------------
-Port 22
+Port 2222
 Protocol 2
 AddressFamily any
 ListenAddress 0.0.0.0
+# No PID file needed for foreground daemon
+PidFile none
 
 # -------------------------------
 # Authentication Settings
@@ -20,7 +22,6 @@ AuthenticationMethods publickey
 # Host Key Configuration
 # -------------------------------
 HostKey /etc/ssh/ssh_host_rsa_key
-HostKey /etc/ssh/ssh_host_ecdsa_key
 HostKey /etc/ssh/ssh_host_ed25519_key
 
 # -------------------------------
@@ -34,7 +35,7 @@ LoginGraceTime 30
 # -------------------------------
 # Connection Restrictions
 # -------------------------------
-AllowUsers user1
+AllowUsers ${SFTP_USER}
 IgnoreRhosts yes
 IgnoreUserKnownHosts yes
 PermitUserEnvironment no
@@ -64,11 +65,18 @@ Banner none
 Subsystem sftp internal-sftp -l INFO
 
 # Restrict user to SFTP only with chroot
-Match User user1 
-    ChrootDirectory /home/user1
-    ForceCommand internal-sftp -l INFO
-    AllowTcpForwarding no
-    X11Forwarding no
-    PermitTTY no
+Match User ${SFTP_USER} Address ${SFTP_ALLOWED_IP}
+  ChrootDirectory ${SFTP_BASE}/${SFTP_USER}
+  ForceCommand internal-sftp -l INFO
+  AllowTcpForwarding no
+  X11Forwarding no
+  PermitTTY no
+
+# Block user from all other IPs
+Match User ${SFTP_USER}
+  ForceCommand echo "Access denied from this IP"
+  PermitTTY no
+  AllowTcpForwarding no
+  X11Forwarding no
 
 

@@ -3,16 +3,34 @@ services:
     build:
       context: .
       dockerfile: Containerfile
-    image: diquzart/sftp:v1.0.0-ubi
+      args:
+        SFTP_USER: ${SFTP_USER}
+        SFTP_BASE: ${SFTP_BASE_DIR}
+        SFTP_ALLOWED_IP: ${SFTP_ALLOWED_IP}
+        GENERATE_SSH_HOST_KEYS: "true"
+    image: diquzart/sftp/sftp:v1.0.0-ubi
     container_name: sftp-ubi
     ports:
-      - "2222:22"
-    environment:
-      SFTP_USER: user1
-      SFTP_KEY_PATH: /config/authorized_keys
+      - "${SFTP_PORT}:${SFTP_PORT}"
     volumes:
-      - ~/.ssh/id_ed25519.pub:/config/authorized_keys:ro
-      - ./download:/sftp/user1/download
-      - ./sshd_config:/etc/ssh/sshd_config:ro
+      - ~/.ssh/id_ed25519.pub:${SFTP_BASE_DIR}/${SFTP_USER}/.ssh/authorized_keys
+      - ./data:${SFTP_BASE_DIR}/${SFTP_USER}/data:ro
+      # - ./sshd_config.example:/etc/ssh/sshd_config:ro
     entrypoint: ["/entrypoint.sh"]
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - NET_RAW
+      - SYS_ADMIN
+      - SYS_MODULE
+      - SYS_PTRACE
+      - SYS_TIME
+      - NET_ADMIN
+      - DAC_READ_SEARCH
+      - FOWNER
+      - MKNOD
+      - AUDIT_CONTROL
+      - CHOWN
+      - LINUX_IMMUTABLE
+    read_only: true
